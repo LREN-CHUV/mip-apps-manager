@@ -102,6 +102,13 @@ def removeBetween(fileName, start, stop):
 		sys.exit(1)
 
 
+def strContainsListElement(string, strList):
+	for l in strList:
+		if l in string:
+			return True
+	return False
+
+
 def main():
 	# Get arguments
 	args = getArgs()
@@ -132,11 +139,48 @@ def main():
 	path = os.path.join(args.mipDir, 'scripts/app/hbpapps/hbpapps.html')
 	if fileContains(path,'tile-'+args.app):
 			limits = findTagLimits(path, '<div class="info-tile tile-'+args.app+'">', '<div', '</div')
-			print str(limits[0])
-			print str(limits[1])
 			removeBetween(path, limits[0]-1, limits[1]+1)
 	else:
 		print 'The tile for this app seems to have already been removed from the `hbpapps.html` file ! '
+
+	# Remove tile from less file
+	path = os.path.join(args.mipDir, 'styles/less/virtua/dashboard.less')
+	if fileContains(path,'tile-'+args.app):
+			limits = findTagLimits(path, '&.tile-'+args.app+' {', '{', '}')
+			removeBetween(path, limits[0], limits[1])
+	else:
+		print 'The tile for this app seems to have already been removed from the `hbpapps.html` file ! '
+
+	# Update tiles colors
+	try:
+		exclList = ['&.tile-orange','&.tile-blue', '&.tile-gray', '&.tile-edit']
+		content = ''
+		needChange = False
+		cssCode = ''
+		f = open(path, 'r')
+		tileNum = 0 
+		for line in f:
+			if needChange:
+				content += cssCode
+				needChange = False
+			else:
+				content += line
+				if '&.tile-' in line and not strContainsListElement(line, exclList):
+					tileNum += 1
+					needChange = True
+					if (tileNum+3) % 4 == 0:
+						cssCode = '    background-color: rgba(222, 147, 109, 0.25);\n'  # orange
+					elif (tileNum+2) % 4 == 0:
+						cssCode = '    background-color: rgba(59, 139, 144, 0.25);\n'  # blue
+					elif (tileNum+1) % 4 == 0:
+						cssCode = '    background-color: rgba(158, 158, 158, 0.251);\n'  # gray
+					elif tileNum % 4 == 0:
+						cssCode = '    background-color: rgba(45, 77, 79, 0.251);\n'  # indigo
+		f.close()
+		writeFile(path, content)
+	except IOError:
+		print 'Error in main : Cannot read the file '+path+' ! '
+		sys.exit(1)
 
 
 if __name__ == '__main__':
